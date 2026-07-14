@@ -2,7 +2,11 @@ export interface Employee {
   id: string;
   name: string;
   role: string;
-  photo: string; // Base64 data URL
+  photo: string;
+  login?: string;
+  entradaHoy?: string | null;
+  salidaHoy?: string | null;
+  tieneFoto?: boolean;
   createdAt: string;
 }
 
@@ -12,14 +16,18 @@ export interface AttendanceRecord {
   employeeName: string;
   timestamp: string;
   type: 'entrada' | 'salida';
-  capturedPhoto: string; // Base64 data URL at clock-in
-  confidence: number; // Gemini recognition match confidence (0 - 100)
+  capturedPhoto: string;
+  confidence: number;
   syncStatus?: 'no_configurado' | 'sincronizado' | 'fallido';
   syncError?: string;
+  reasoning?: string;
+  dispositivoId?: string;
 }
 
 export interface TerminalSettings {
-  webhookUrl: string;
-  webhookToken: string;
   deviceName: string;
+  deviceId?: string;
+  supabaseConfigured?: boolean;
+  webhookUrl?: string;
+  webhookToken?: string;
 }

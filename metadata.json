@@ -1,6 +1,6 @@
 {
-  "name": "Reloj Biométrico",
-  "description": "Reloj checador biométrico con reconocimiento facial mediante Gemini para registrar entrada y salida de empleados.",
+  "name": "plotLAB",
+  "description": "Reloj checador biométrico plotLAB con reconocimiento facial mediante Gemini para registrar entrada y salida de empleados.",
   "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

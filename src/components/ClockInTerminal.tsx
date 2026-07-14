@@ -26,6 +26,7 @@ export default function ClockInTerminal({ onRecordAdded, employeesCount }: Clock
     message?: string;
     confidence?: number;
     reasoning?: string;
+    rrhh?: { mensaje?: string; tarde?: boolean; minutos_tarde?: number; hora_argentina?: string };
   } | null>(null);
 
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -210,73 +211,72 @@ export default function ClockInTerminal({ onRecordAdded, employeesCount }: Clock
       speak("Ocurrió un error en el sistema.");
       setAutoModeCooldown(8); // Cooldown on error too
     }
+  };
+
   return (
-    <div className="bg-slate-900 rounded-2xl border border-slate-800/80 shadow-2xl overflow-hidden flex flex-col h-full" id="clock-terminal">
+    <div className="bg-slate-900 rounded-2xl border border-slate-800/80 shadow-2xl overflow-hidden flex flex-col h-full min-h-0" id="clock-terminal">
       {/* Header */}
-      <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950 text-white">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/25 flex items-center justify-center">
-            <span className="text-lg">⏱️</span>
+      <div className="px-3 py-2.5 border-b border-slate-800 flex items-center justify-between gap-2 bg-slate-950 text-white shrink-0">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-plot/10 border border-plot/25 flex items-center justify-center shrink-0">
+            <Camera className="w-4 h-4 text-plot" />
           </div>
-          <div>
-            <h2 className="font-bold text-sm text-slate-100 tracking-tight">Terminal de Asistencia</h2>
-            <p className="text-[10px] text-slate-400">Escaneo facial integrado en tiempo real</p>
+          <div className="min-w-0">
+            <h2 className="font-bold text-xs text-slate-100 tracking-tight truncate">Terminal</h2>
+            <p className="text-[9px] text-slate-400 truncate">Escaneo facial</p>
           </div>
         </div>
 
-        {/* Large digital ticking clock directly inside the terminal header */}
-        <div className="flex items-center gap-2 px-3 py-1 bg-slate-900 border border-slate-800 rounded-xl font-mono text-sm font-black text-white shadow-inner tracking-wider">
-          <Clock className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
-          <span>{time.toLocaleTimeString('es-MX', { hour12: false })}</span>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-1 px-2 py-1 bg-slate-900 border border-slate-800 rounded-lg font-mono text-[11px] font-black text-white tracking-wider">
+            <Clock className="w-3 h-3 text-plot animate-pulse" />
+            <span>{time.toLocaleTimeString('es-MX', { hour12: false })}</span>
+          </div>
+          <button
+            onClick={() => setSoundEnabled(!soundEnabled)}
+            className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-200 transition"
+            title={soundEnabled ? "Silenciar" : "Activar sonido"}
+            id="btn-toggle-sound"
+          >
+            {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+          </button>
         </div>
-
-        <button
-          onClick={() => setSoundEnabled(!soundEnabled)}
-          className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-200 transition"
-          title={soundEnabled ? "Silenciar" : "Activar sonido"}
-          id="btn-toggle-sound"
-        >
-          {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-        </button>
       </div>
 
       {/* Selector de Entrada/Salida y Modo Automático */}
-      <div className="p-4 bg-slate-950 border-b border-slate-800/80 space-y-3">
-        <div className="grid grid-cols-2 gap-3">
+      <div className="px-3 py-2.5 bg-slate-950 border-b border-slate-800/80 space-y-2 shrink-0">
+        <div className="grid grid-cols-2 gap-2">
           <button
             onClick={() => setCheckType('entrada')}
-            className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold transition duration-200 border cursor-pointer text-xs ${
+            className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl font-bold transition duration-200 border cursor-pointer text-[11px] ${
               checkType === 'entrada'
                 ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 shadow-sm'
                 : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800'
             }`}
             id="btn-select-entrada"
           >
-            <LogIn className="w-4 h-4 text-emerald-400" />
-            <span>Registrar Entrada</span>
+            <LogIn className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Entrada</span>
           </button>
           <button
             onClick={() => setCheckType('salida')}
-            className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold transition duration-200 border cursor-pointer text-xs ${
+            className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl font-bold transition duration-200 border cursor-pointer text-[11px] ${
               checkType === 'salida'
                 ? 'bg-rose-500/10 border-rose-500/30 text-rose-400 shadow-sm'
                 : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800'
             }`}
             id="btn-select-salida"
           >
-            <LogOut className="w-4 h-4 text-rose-400" />
-            <span>Registrar Salida</span>
+            <LogOut className="w-3.5 h-3.5 text-rose-400" />
+            <span>Salida</span>
           </button>
         </div>
 
         {/* Modo Automático Toggle */}
-        <div className="flex items-center justify-between bg-slate-900 border border-slate-800 p-3 rounded-xl">
-          <div className="flex items-center gap-2.5">
-            <span className="text-base">🤖</span>
-            <div>
-              <h4 className="text-xs font-bold text-slate-200 leading-tight">Modo Manos Libres (Automático)</h4>
-              <p className="text-[9px] text-slate-400 mt-0.5">El sistema tomará fotos y registrará asistencia automáticamente al detectar un rostro.</p>
-            </div>
+        <div className="flex items-center justify-between bg-slate-900 border border-slate-800 p-2.5 rounded-xl gap-2">
+          <div className="min-w-0">
+            <h4 className="text-[11px] font-bold text-slate-200 leading-tight">Modo automático</h4>
+            <p className="text-[9px] text-slate-400 mt-0.5 leading-snug">Registra al detectar un rostro.</p>
           </div>
           <button
             onClick={() => {
@@ -289,7 +289,7 @@ export default function ClockInTerminal({ onRecordAdded, employeesCount }: Clock
               }
             }}
             className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-              isAutoMode ? 'bg-indigo-600' : 'bg-slate-800'
+              isAutoMode ? 'bg-plot' : 'bg-slate-800'
             }`}
             id="btn-toggle-auto-mode"
           >
@@ -303,36 +303,36 @@ export default function ClockInTerminal({ onRecordAdded, employeesCount }: Clock
       </div>
 
       {/* Main Area: Camera View & Scan Feedback */}
-      <div className="flex-1 p-4 md:p-6 flex flex-col items-center justify-center min-h-[360px] bg-slate-950 relative overflow-hidden">
+      <div className="flex-1 px-3 py-2 flex flex-col items-center justify-center min-h-0 bg-slate-950 relative overflow-hidden">
         
         {/* Invisible canvas used for capturing frames */}
         <canvas ref={canvasRef} className="hidden" />
 
         {cameraError ? (
-          <div className="max-w-md text-center p-6 bg-red-950/20 border border-red-900/30 rounded-2xl flex flex-col items-center gap-4">
-            <AlertCircle className="w-12 h-12 text-red-500" />
-            <p className="text-sm text-red-200 font-medium leading-relaxed">{cameraError}</p>
+          <div className="w-full text-center p-4 bg-red-950/20 border border-red-900/30 rounded-2xl flex flex-col items-center gap-3">
+            <AlertCircle className="w-10 h-10 text-red-500" />
+            <p className="text-xs text-red-200 font-medium leading-relaxed">{cameraError}</p>
             <button
               onClick={startCamera}
-              className="flex items-center gap-2 bg-red-900/50 hover:bg-red-800/60 border border-red-700/50 text-white font-medium py-2 px-5 rounded-xl transition duration-200 text-sm cursor-pointer"
+              className="flex items-center gap-2 bg-red-900/50 hover:bg-red-800/60 border border-red-700/50 text-white font-medium py-2 px-4 rounded-xl transition duration-200 text-xs cursor-pointer"
               id="btn-retry-camera"
             >
-              <RefreshCw className="w-4 h-4" />
-              <span>Reintentar Conexión</span>
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Reintentar</span>
             </button>
           </div>
         ) : employeesCount === 0 ? (
-          <div className="max-w-md text-center p-8 bg-amber-950/25 border border-amber-900/40 rounded-2xl flex flex-col items-center gap-4">
-            <AlertCircle className="w-12 h-12 text-amber-500 animate-pulse" />
+          <div className="w-full text-center p-4 bg-amber-950/25 border border-amber-900/40 rounded-2xl flex flex-col items-center gap-3">
+            <AlertCircle className="w-10 h-10 text-amber-500 animate-pulse" />
             <div>
-              <h3 className="text-amber-200 font-semibold mb-1 text-base">Falta base de datos biométrica</h3>
-              <p className="text-sm text-amber-400/90 leading-relaxed">
-                Aún no hay ningún empleado registrado. Abra el panel de <strong>Configurar</strong> para registrar rostros y de paso enlazar el webhook de su sistema de Recursos Humanos externo.
+              <h3 className="text-amber-200 font-semibold mb-1 text-sm">Sin fotos de RRHH</h3>
+              <p className="text-xs text-amber-400/90 leading-relaxed">
+                Cargue fotos en los <strong>legajos</strong> de plotLAB. Este terminal solo reconoce.
               </p>
             </div>
           </div>
         ) : (
-          <div className="relative w-full max-w-lg aspect-[4/3] rounded-2xl overflow-hidden border border-slate-800 shadow-2xl bg-black">
+          <div className="relative w-full aspect-[3/4] max-h-full rounded-2xl overflow-hidden border border-slate-800 shadow-2xl bg-black">
             {/* Camera Video Stream */}
             <video
               ref={videoRef}
@@ -342,47 +342,39 @@ export default function ClockInTerminal({ onRecordAdded, employeesCount }: Clock
               className="w-full h-full object-cover scale-x-[-1]"
             />
 
-            {/* Floating digital clock inside camera */}
-            <div className="absolute top-4 right-4 bg-slate-950/90 border border-indigo-500/30 px-3 py-1 rounded-xl shadow-lg flex items-center gap-1.5 font-mono text-xs font-black text-white z-10">
-              <Clock className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
-              <span>{time.toLocaleTimeString('es-MX', { hour12: false })}</span>
-            </div>
-
             {/* Scanning Laser Line Animation */}
             {isCapturing && (
-              <div className="absolute inset-x-0 h-1 bg-indigo-500 shadow-[0_0_15px_#6366f1] animate-bounce top-0 bottom-0 z-10" />
+              <div className="absolute inset-x-0 h-1 bg-plot shadow-[0_0_15px_#AB671B] animate-bounce top-0 bottom-0 z-10" />
             )}
 
             {/* Automated Scan Status Indicators */}
             {isAutoMode && (
-              <div className="absolute top-4 left-4 z-10 flex flex-col gap-1.5 pointer-events-none">
-                <div className="bg-indigo-600/95 backdrop-blur-md text-white font-mono text-[9px] tracking-wider uppercase font-extrabold px-2.5 py-1 rounded-md border border-indigo-500/30 flex items-center gap-1.5 shadow-md">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-                  <span>Auto-Checador Activo</span>
+              <div className="absolute top-3 left-3 z-10 flex flex-col gap-1 pointer-events-none">
+                <div className="bg-plot/95 backdrop-blur-md text-white font-mono text-[8px] tracking-wider uppercase font-extrabold px-2 py-1 rounded-md border border-plot/30 flex items-center gap-1.5 shadow-md">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                  <span>Auto activo</span>
                 </div>
                 {autoModeCooldown > 0 ? (
                   <div className="bg-amber-600/95 backdrop-blur-md text-white font-mono text-[8px] tracking-wider uppercase font-black px-2 py-0.5 rounded-md border border-amber-500/30 shadow-md">
-                    Pausa: Esperando {autoModeCooldown}s
+                    Pausa {autoModeCooldown}s
                   </div>
                 ) : (
                   <div className="bg-emerald-600/95 backdrop-blur-md text-white font-mono text-[8px] tracking-wider uppercase font-black px-2 py-0.5 rounded-md border border-emerald-500/30 shadow-md animate-pulse">
-                    Escaneando en breve...
+                    Escaneando...
                   </div>
                 )}
               </div>
             )}
 
             {/* Target Face Overlay Frame */}
-            <div className="absolute inset-0 border-[16px] border-slate-950/70 flex items-center justify-center pointer-events-none">
-              <div className="w-64 h-72 border-2 border-dashed border-indigo-400/60 rounded-[100px] relative flex items-center justify-center">
-                {/* Corner Accents */}
-                <div className="absolute -top-2 -left-2 w-6 h-6 border-t-4 border-l-4 border-indigo-400" />
-                <div className="absolute -top-2 -right-2 w-6 h-6 border-t-4 border-r-4 border-indigo-400" />
-                <div className="absolute -bottom-2 -left-2 w-6 h-6 border-b-4 border-l-4 border-indigo-400" />
-                <div className="absolute -bottom-2 -right-2 w-6 h-6 border-b-4 border-r-4 border-indigo-400" />
+            <div className="absolute inset-0 border-[12px] border-slate-950/70 flex items-center justify-center pointer-events-none">
+              <div className="w-[70%] max-w-[220px] aspect-[3/4] border-2 border-dashed border-plot/60 rounded-[80px] relative flex items-center justify-center">
+                <div className="absolute -top-1.5 -left-1.5 w-5 h-5 border-t-4 border-l-4 border-plot" />
+                <div className="absolute -top-1.5 -right-1.5 w-5 h-5 border-t-4 border-r-4 border-plot" />
+                <div className="absolute -bottom-1.5 -left-1.5 w-5 h-5 border-b-4 border-l-4 border-plot" />
+                <div className="absolute -bottom-1.5 -right-1.5 w-5 h-5 border-b-4 border-r-4 border-plot" />
                 
-                {/* Overlay guides */}
-                <div className="text-[10px] text-indigo-300 font-mono tracking-widest uppercase bg-slate-950/80 px-3 py-1 rounded-full absolute -top-8 border border-indigo-500/20">
+                <div className="text-[9px] text-plot-light font-mono tracking-widest uppercase bg-slate-950/80 px-2.5 py-0.5 rounded-full absolute -top-7 border border-plot/20">
                   {autoModeCooldown > 0 ? `Listo en ${autoModeCooldown}s` : 'Alinee su rostro'}
                 </div>
               </div>
@@ -395,12 +387,12 @@ export default function ClockInTerminal({ onRecordAdded, employeesCount }: Clock
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="absolute inset-0 bg-slate-950/90 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center z-20"
+                  className="absolute inset-0 bg-slate-950/90 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center z-20"
                 >
-                  <Loader2 className="w-12 h-12 text-indigo-400 animate-spin mb-4" />
-                  <p className="text-white font-medium text-base mb-2">{statusMessage}</p>
-                  <p className="text-xs text-slate-400 max-w-xs">
-                    Gemini está analizando la fisonomía de la captura contra nuestra base de referencia.
+                  <Loader2 className="w-10 h-10 text-plot animate-spin mb-3" />
+                  <p className="text-white font-medium text-sm mb-1">{statusMessage}</p>
+                  <p className="text-[10px] text-slate-400 max-w-[200px]">
+                    Analizando rasgos faciales...
                   </p>
                 </motion.div>
               )}
@@ -411,35 +403,34 @@ export default function ClockInTerminal({ onRecordAdded, employeesCount }: Clock
 
       {/* Camera Capture Footer */}
       {!cameraError && employeesCount > 0 && (
-        <div className="p-5 bg-slate-950 border-t border-slate-800 flex flex-col items-center justify-center gap-3">
+        <div className="px-3 py-2.5 bg-slate-950 border-t border-slate-800 flex flex-col items-center justify-center gap-2 shrink-0">
           {isAutoMode ? (
-            <div className="text-center">
-              <div className="flex items-center gap-2 text-slate-400 text-xs font-semibold">
-                <span className="w-2 rounded-full bg-indigo-500 animate-pulse" />
-                <span>Sitúese frente a la pantalla para registrar asistencia sin tocar la tablet.</span>
-              </div>
+            <div className="text-center w-full">
+              <p className="text-slate-400 text-[10px] font-semibold leading-snug px-2">
+                Sitúese frente al celular para registrar.
+              </p>
               <button
                 onClick={handleRecognize}
                 disabled={isCapturing || autoModeCooldown > 0}
-                className="mt-2 text-[10px] font-bold text-indigo-400 hover:text-indigo-300 bg-slate-900 border border-slate-800 hover:border-slate-700 px-4 py-1.5 rounded-lg shadow-2xs transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="mt-1.5 text-[10px] font-bold text-plot hover:text-plot-light bg-slate-900 border border-slate-800 hover:border-slate-700 px-3 py-1.5 rounded-lg transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 id="btn-force-scan"
               >
-                {autoModeCooldown > 0 ? `Reanudando auto-escaneo en ${autoModeCooldown}s` : 'Forzar Escaneo Manual'}
+                {autoModeCooldown > 0 ? `Espera ${autoModeCooldown}s` : 'Forzar escaneo'}
               </button>
             </div>
           ) : (
             <button
               onClick={handleRecognize}
               disabled={isCapturing}
-              className={`flex items-center gap-3 px-8 py-4 rounded-xl text-white font-semibold shadow-md cursor-pointer hover:shadow-lg transition transform active:scale-95 duration-150 text-sm ${
+              className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl text-white font-semibold shadow-md cursor-pointer transition transform active:scale-[0.98] text-xs ${
                 checkType === 'entrada'
-                  ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200'
-                  : 'bg-rose-600 hover:bg-rose-700 shadow-rose-200'
+                  ? 'bg-emerald-600 hover:bg-emerald-700'
+                  : 'bg-rose-600 hover:bg-rose-700'
               }`}
               id="btn-trigger-recognition"
             >
               <Camera className="w-4 h-4" />
-              <span>Registrar {checkType === 'entrada' ? 'Entrada' : 'Salida'} Biométrica</span>
+              <span>Registrar {checkType === 'entrada' ? 'Entrada' : 'Salida'}</span>
             </button>
           )}
         </div>
@@ -452,65 +443,63 @@ export default function ClockInTerminal({ onRecordAdded, employeesCount }: Clock
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 15 }}
-            className="p-5 border-t border-slate-800 bg-slate-950"
+            className="px-3 py-2.5 border-t border-slate-800 bg-slate-950 shrink-0 max-h-[28%] overflow-y-auto"
           >
             {recognitionResult.recognized ? (
-              <div className="bg-emerald-950/20 border border-emerald-900/30 rounded-xl p-4 flex flex-col md:flex-row gap-4 items-start">
-                <div className="relative flex-shrink-0">
+              <div className="bg-emerald-950/20 border border-emerald-900/30 rounded-xl p-3 flex gap-3 items-start">
+                <div className="relative shrink-0">
                   <img
                     src={recognitionResult.employee?.photo}
                     alt={recognitionResult.employee?.name}
-                    className="w-16 h-16 rounded-xl object-cover border-2 border-emerald-500/50"
+                    className="w-12 h-12 rounded-xl object-cover border-2 border-emerald-500/50"
                   />
                   <div className="absolute -bottom-1 -right-1 bg-emerald-600 border-2 border-slate-900 rounded-full p-0.5 text-white">
-                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <ShieldCheck className="w-3 h-3" />
                   </div>
                 </div>
                 
-                <div className="flex-1 text-left">
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <span className="bg-emerald-500/10 text-emerald-400 text-[10px] font-black px-2.5 py-1 rounded-md uppercase border border-emerald-500/20">
-                      {checkType === 'entrada' ? 'Entrada Autorizada' : 'Salida Autorizada'}
+                <div className="flex-1 text-left min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="bg-emerald-500/10 text-emerald-400 text-[9px] font-black px-2 py-0.5 rounded-md uppercase border border-emerald-500/20">
+                      {checkType === 'entrada' ? 'Entrada OK' : 'Salida OK'}
                     </span>
-                    <span className="text-emerald-400 font-mono text-xs font-bold">
-                      Similitud: {recognitionResult.confidence}%
+                    <span className="text-emerald-400 font-mono text-[10px] font-bold">
+                      {recognitionResult.confidence}%
                     </span>
                   </div>
-                  <h3 className="font-bold text-white text-base mt-1 tracking-tight">
+                  <h3 className="font-bold text-white text-sm mt-0.5 tracking-tight truncate">
                     {recognitionResult.employee?.name}
                   </h3>
-                  <p className="text-slate-400 text-xs font-medium">
-                    {recognitionResult.employee?.role} • ID: {recognitionResult.employee?.id}
+                  <p className="text-slate-400 text-[10px] font-medium truncate">
+                    {recognitionResult.employee?.role} • {recognitionResult.employee?.id}
                   </p>
-                  
-                  <div className="mt-2 text-xs text-slate-300 bg-emerald-950/30 p-2.5 rounded-lg border border-emerald-900/20">
-                    <strong className="text-emerald-400 font-bold">Dictamen de IA: </strong>
-                    {recognitionResult.reasoning}
-                  </div>
+                  {(recognitionResult.message || recognitionResult.rrhh?.mensaje) && (
+                    <p className="text-emerald-300/90 text-[10px] mt-1 leading-snug">
+                      {recognitionResult.message || recognitionResult.rrhh?.mensaje}
+                    </p>
+                  )}
+                  {recognitionResult.rrhh?.tarde && (
+                    <p className="text-amber-400 text-[9px] font-bold mt-0.5">
+                      Tardanza: {recognitionResult.rrhh.minutos_tarde} min
+                    </p>
+                  )}
                 </div>
               </div>
             ) : (
-              <div className="bg-rose-950/20 border border-rose-900/30 rounded-xl p-4 flex flex-col md:flex-row gap-4 items-start">
-                <div className="p-2.5 bg-rose-500/10 text-rose-400 rounded-xl flex-shrink-0 border border-rose-500/10">
-                  <AlertCircle className="w-7 h-7" />
+              <div className="bg-rose-950/20 border border-rose-900/30 rounded-xl p-3 flex gap-3 items-start">
+                <div className="p-2 bg-rose-500/10 text-rose-400 rounded-xl shrink-0 border border-rose-500/10">
+                  <AlertCircle className="w-5 h-5" />
                 </div>
-                <div className="flex-1 text-left">
-                  <span className="bg-rose-500/10 text-rose-400 text-[10px] font-black px-2.5 py-1 rounded-md uppercase border border-rose-500/20">
-                    Error de Reconocimiento
+                <div className="flex-1 text-left min-w-0">
+                  <span className="bg-rose-500/10 text-rose-400 text-[9px] font-black px-2 py-0.5 rounded-md uppercase border border-rose-500/20">
+                    No reconocido
                   </span>
-                  <h3 className="font-bold text-white text-base mt-1 tracking-tight">
-                    Acceso No Registrado
+                  <h3 className="font-bold text-white text-sm mt-0.5 tracking-tight">
+                    Acceso no registrado
                   </h3>
-                  <p className="text-xs text-slate-300 mt-1">
+                  <p className="text-[10px] text-slate-300 mt-0.5 line-clamp-2">
                     {recognitionResult.message}
                   </p>
-                  
-                  {recognitionResult.reasoning && (
-                    <div className="mt-2 text-xs text-slate-300 bg-rose-950/30 p-2.5 rounded-lg border border-rose-900/20">
-                      <strong className="text-rose-400 font-bold">Análisis: </strong>
-                      {recognitionResult.reasoning}
-                    </div>
-                  )}
                 </div>
               </div>
             )}
@@ -519,5 +508,4 @@ export default function ClockInTerminal({ onRecordAdded, employeesCount }: Clock
       </AnimatePresence>
     </div>
   );
-}
 }
