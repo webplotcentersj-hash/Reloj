@@ -73,7 +73,9 @@ export default function App() {
       try {
         data = raw ? JSON.parse(raw) : {};
       } catch {
-        setPasscodeError('Error de servidor. Reintentá.');
+        setPasscodeError(
+          `Error de servidor (${response.status}). Redeploy en Vercel o revisá /api/unlock.`
+        );
         return;
       }
       if (response.ok && data.unlocked) {
