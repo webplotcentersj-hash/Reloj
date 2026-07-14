@@ -269,11 +269,42 @@ export function createApiApp() {
     });
   });
 
-  // Empleados desde RRHH (legajos). Query ?all=1 incluye sin foto.
+  // Empleados desde RRHH (legajos). Query ?all=1 incluye sin foto. ?light=1 omite base64 (listados).
   app.get("/api/employees", async (req, res) => {
     try {
       const force = req.query.refresh === "1";
       const includeAll = req.query.all === "1";
+      const light = req.query.light === "1";
+
+      if (light) {
+        const supabase = getSupabase();
+        const { data, error } = await supabase.rpc("listar_empleados_reloj_tablet");
+        if (error) {
+          throw new Error(`RPC listar_empleados_reloj_tablet: ${error.message}`);
+        }
+        const rows = (data || []) as RrhhEmployeeRow[];
+        const list = rows
+          .map((row) => {
+            const name =
+              `${(row.nombre || "").trim()} ${(row.apellido || "").trim()}`.trim() ||
+              row.login;
+            const hasPhoto = Boolean(row.tiene_foto_legajo && row.foto_url);
+            return {
+              id: String(row.id_usuario),
+              name,
+              role: row.sector || "Empleado",
+              photo: row.foto_url || "",
+              login: row.login,
+              entradaHoy: row.entrada_hoy,
+              salidaHoy: row.salida_hoy,
+              tieneFoto: hasPhoto,
+              createdAt: new Date().toISOString(),
+            };
+          })
+          .filter((e) => (includeAll ? true : e.tieneFoto));
+        return res.json(list);
+      }
+
       const cache = await fetchEmployeesFromRrhh(force);
       const list = includeAll ? cache.all : cache.withPhoto;
       res.json(list.map(toClientEmployee));
@@ -289,8 +320,105 @@ export function createApiApp() {
   app.post("/api/employees", (_req, res) => {
     res.status(405).json({
       error:
-        "Alta biométrica local deshabilitada. Cargue la foto en el legajo RRHH de plotLAB.",
+        "Use POST /api/employees/photo para subir la foto de legajo.",
     });
+  });
+
+  // Subir / actualizar foto de legajo → Storage bucket `legajos` + legajos_empleados.foto_url
+  app.post("/api/employees/photo", async (req, res) => {
+    try {
+      const { idUsuario, photo } = req.body || {};
+      const userId = Number(idUsuario);
+      if (!userId || !photo || typeof photo !== "string") {
+        return res.status(400).json({
+          error: "Se requieren idUsuario y photo (data URL base64).",
+        });
+      }
+
+      const parsed = parseDataUrl(photo);
+      if (!parsed.data) {
+        return res.status(400).json({ error: "Foto inválida." });
+      }
+
+      const buf = Buffer.from(parsed.data, "base64");
+      if (buf.length < 8_000) {
+        return res.status(400).json({
+          error: "La foto es demasiado chica. Usá una imagen nítida frontal (mín. ~8 KB).",
+        });
+      }
+      if (buf.length > 6_000_000) {
+        return res.status(400).json({
+          error: "La foto supera 6 MB. Comprimila o sacá otra.",
+        });
+      }
+
+      const ext = parsed.mimeType.includes("png")
+        ? "png"
+        : parsed.mimeType.includes("webp")
+          ? "webp"
+          : "jpeg";
+      const contentType =
+        ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg";
+
+      const supabase = getSupabase();
+
+      const { data: legajo, error: legajoErr } = await supabase
+        .from("legajos_empleados")
+        .select("id, id_usuario, nombre, apellido")
+        .eq("id_usuario", userId)
+        .maybeSingle();
+
+      if (legajoErr) {
+        throw new Error(legajoErr.message);
+      }
+      if (!legajo) {
+        return res.status(404).json({
+          error: `No hay legajo RRHH para id_usuario ${userId}.`,
+        });
+      }
+
+      const path = `empleados/${userId}.${ext === "jpeg" ? "jpeg" : ext}`;
+      const { error: uploadErr } = await supabase.storage
+        .from("legajos")
+        .upload(path, buf, {
+          contentType,
+          upsert: true,
+          cacheControl: "60",
+        });
+
+      if (uploadErr) {
+        throw new Error(`Storage: ${uploadErr.message}`);
+      }
+
+      const { data: pub } = supabase.storage.from("legajos").getPublicUrl(path);
+      // cache-bust para que Gemini / el browser no vean la foto vieja
+      const fotoUrl = `${pub.publicUrl}?t=${Date.now()}`;
+
+      const { error: updErr } = await supabase
+        .from("legajos_empleados")
+        .update({ foto_url: fotoUrl, updated_at: new Date().toISOString() })
+        .eq("id_usuario", userId);
+
+      if (updErr) {
+        throw new Error(`Legajo: ${updErr.message}`);
+      }
+
+      employeeCache = null;
+
+      res.json({
+        success: true,
+        idUsuario: userId,
+        name: `${(legajo.nombre || "").trim()} ${(legajo.apellido || "").trim()}`.trim(),
+        foto_url: fotoUrl,
+        message: "Foto de legajo actualizada en plotLAB RRHH.",
+      });
+    } catch (err: any) {
+      console.error("POST /api/employees/photo", err);
+      res.status(500).json({
+        error: "No se pudo guardar la foto en RRHH",
+        details: err.message,
+      });
+    }
   });
 
   app.delete("/api/employees/:id", (_req, res) => {

@@ -9,6 +9,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import ClockInTerminal from './components/ClockInTerminal';
+import PhotoUploadPanel from './components/PhotoUploadPanel';
 import { Employee, TerminalSettings } from './types';
 
 export default function App() {
@@ -21,6 +22,7 @@ export default function App() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [unlocked, setUnlocked] = useState(false);
+  const [view, setView] = useState<'terminal' | 'photos'>('terminal');
   const [passcode, setPasscode] = useState('');
   const [passcodeError, setPasscodeError] = useState('');
   const [isUnlocking, setIsUnlocking] = useState(false);
@@ -144,9 +146,21 @@ export default function App() {
           </div>
 
           {unlocked && (
-            <div className="flex items-center gap-1 bg-slate-950 border border-emerald-500/30 px-2 py-1 rounded-lg text-[9px] font-bold text-emerald-400">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>online</span>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {view === 'terminal' && (
+                <button
+                  type="button"
+                  onClick={() => setView('photos')}
+                  className="px-2 py-1 rounded-lg bg-slate-950 border border-plot/40 text-[9px] font-bold text-plot cursor-pointer"
+                  id="btn-open-photos"
+                >
+                  Fotos
+                </button>
+              )}
+              <div className="flex items-center gap-1 bg-slate-950 border border-emerald-500/30 px-2 py-1 rounded-lg text-[9px] font-bold text-emerald-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span>online</span>
+              </div>
             </div>
           )}
         </div>
@@ -197,11 +211,21 @@ export default function App() {
                 Cargando...
               </p>
             </div>
+          ) : view === 'photos' ? (
+            <div className="flex-1 flex flex-col h-full min-h-0">
+              <PhotoUploadPanel
+                onBack={() => setView('terminal')}
+                onSaved={() => {
+                  fetchEmployees();
+                }}
+              />
+            </div>
           ) : (
             <div className="flex-1 flex flex-col h-full min-h-0">
               <ClockInTerminal
                 onRecordAdded={fetchEmployees}
                 employeesCount={employees.length}
+                onOpenPhotos={() => setView('photos')}
               />
             </div>
           )}
@@ -213,6 +237,7 @@ export default function App() {
             onClick={() => {
               if (unlocked) {
                 setUnlocked(false);
+                setView('terminal');
                 setPasscode('');
               }
             }}
@@ -225,6 +250,7 @@ export default function App() {
             type="button"
             onClick={() => {
               setUnlocked(false);
+              setView('terminal');
               setPasscode('');
             }}
             className="w-10 h-8 flex items-center justify-center text-slate-400 hover:text-slate-200 transition active:scale-90"

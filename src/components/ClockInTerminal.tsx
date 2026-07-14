@@ -6,9 +6,10 @@ import { Employee, AttendanceRecord } from '../types';
 interface ClockInTerminalProps {
   onRecordAdded: () => void;
   employeesCount: number;
+  onOpenPhotos?: () => void;
 }
 
-export default function ClockInTerminal({ onRecordAdded, employeesCount }: ClockInTerminalProps) {
+export default function ClockInTerminal({ onRecordAdded, employeesCount, onOpenPhotos }: ClockInTerminalProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
@@ -379,9 +380,20 @@ export default function ClockInTerminal({ onRecordAdded, employeesCount }: Clock
             <div>
               <h3 className="text-amber-200 font-semibold mb-1 text-sm">Sin fotos de RRHH</h3>
               <p className="text-xs text-amber-400/90 leading-relaxed">
-                Cargue fotos en los <strong>legajos</strong> de plotLAB. Este terminal solo reconoce.
+                Subí la foto de cada empleado con los requisitos biométricos, o cargala en los legajos de plotLAB.
               </p>
             </div>
+            {onOpenPhotos && (
+              <button
+                type="button"
+                onClick={onOpenPhotos}
+                className="flex items-center gap-2 bg-plot hover:bg-plot-dark text-white font-bold py-2.5 px-4 rounded-xl transition text-xs cursor-pointer"
+                id="btn-open-photos-empty"
+              >
+                <Camera className="w-3.5 h-3.5" />
+                Subir fotos ahora
+              </button>
+            )}
           </div>
         ) : (
           <div className="relative w-full aspect-[3/4] max-h-full rounded-2xl overflow-hidden border border-slate-800 shadow-2xl bg-black">
