@@ -238,9 +238,10 @@ export function createApiApp() {
   app.get("/api/settings", (_req, res) => {
     try {
       const settings = readSettings();
+      // Solo lectura desde env / Vercel — sin panel de edición en la app
       res.json({
-        ...settings,
-        deviceId: settings.deviceId || DEVICE_ID,
+        deviceName: process.env.DEVICE_NAME || settings.deviceName || "plotLAB Reloj Facial 1",
+        deviceId: (process.env.DEVICE_ID || settings.deviceId || DEVICE_ID).toLowerCase(),
         supabaseConfigured: Boolean(getSupabaseKey()),
         geminiConfigured: Boolean(process.env.GEMINI_API_KEY),
       });
@@ -249,19 +250,23 @@ export function createApiApp() {
     }
   });
 
-  app.post("/api/settings", (req, res) => {
-    try {
-      const { deviceName, deviceId } = req.body || {};
-      const settings = {
-        deviceName: (deviceName || "plotLAB Reloj Facial 1").toString().trim(),
-        deviceId: (deviceId || DEVICE_ID).toString().trim().toLowerCase(),
-      };
-      writeSettings(settings);
-      res.json({ message: "Configuración guardada", settings });
-    } catch (err: any) {
-      console.error("POST /api/settings", err);
-      res.status(500).json({ error: "Error al guardar configuraciones", details: err.message });
+  app.post("/api/unlock", (req, res) => {
+    const expected = String(process.env.ADMIN_PIN || "1234");
+    const pin = String(req.body?.pin || "").trim();
+    if (!pin) {
+      return res.status(400).json({ unlocked: false, error: "Ingresá el código" });
     }
+    if (pin === expected) {
+      return res.json({ unlocked: true });
+    }
+    return res.status(401).json({ unlocked: false, error: "Código incorrecto" });
+  });
+
+  // Config se gestiona en Vercel (env). No hay edición desde la UI.
+  app.post("/api/settings", (_req, res) => {
+    res.status(405).json({
+      error: "La configuración se define en Vercel (Environment Variables).",
+    });
   });
 
   // Empleados desde RRHH (legajos). Query ?all=1 incluye sin foto.
@@ -461,9 +466,10 @@ Compara la 'Foto Capturada' anterior con cada una de estas fotos de referencia. 
 
         if (matchedEmp) {
           if (matchResult.confidence >= CONFIDENCE_THRESHOLD) {
-            const settings = readSettings();
             const dispositivo =
-              settings.deviceId || DEVICE_ID;
+              process.env.DEVICE_ID ||
+              readSettings().deviceId ||
+              DEVICE_ID;
 
             const supabase = getSupabase();
             const { data: rpcData, error: rpcError } = await supabase.rpc(
