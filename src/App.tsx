@@ -143,17 +143,30 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           deviceName: deviceNameInput.trim() || 'plotLAB Reloj Facial 1',
-          deviceId: deviceIdInput.trim() || 'plotlab-reloj-facial-1',
+          deviceId: (deviceIdInput.trim() || 'plotlab-reloj-facial-1').toLowerCase(),
         })
       });
 
-      const data = await response.json();
+      const raw = await response.text();
+      let data: any = null;
+      try {
+        data = raw ? JSON.parse(raw) : null;
+      } catch {
+        setSettingsSaveError(
+          response.ok
+            ? 'Respuesta inválida del servidor'
+            : `Error del servidor (${response.status}). Revisá Environment Variables en Vercel y Redeploy.`
+        );
+        return;
+      }
+
       if (response.ok) {
         setSettings(data.settings);
+        setDeviceIdInput(data.settings?.deviceId || deviceIdInput);
         setSettingsSaveSuccess(true);
         fetchSettings();
       } else {
-        setSettingsSaveError(data.error || 'Error al guardar');
+        setSettingsSaveError(data?.error || data?.details || 'Error al guardar');
       }
     } catch (err: any) {
       setSettingsSaveError(err.message || 'Error de red');
@@ -417,7 +430,7 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div className={`p-3 rounded-2xl border text-[11px] flex items-center gap-2 ${
+                    <div className={`p-3 rounded-2xl border text-[11px] flex items-center gap-2 ${
                     settings.supabaseConfigured
                       ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
                       : 'bg-amber-500/10 border-amber-500/20 text-amber-400'
@@ -430,7 +443,7 @@ export default function App() {
                     <span>
                       {settings.supabaseConfigured
                         ? 'Supabase conectado'
-                        : 'Falta SUPABASE_SERVICE_ROLE_KEY o SUPABASE_ANON_KEY en .env'}
+                        : 'Faltan vars en este proyecto Vercel: SUPABASE_ANON_KEY (o SERVICE_ROLE). Guardá Production + Redeploy.'}
                     </span>
                   </div>
 

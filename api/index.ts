@@ -1,5 +1,3 @@
-import { createApiApp } from "../server";
-
-const app = createApiApp();
+import app from "../server";
 
 export default app;

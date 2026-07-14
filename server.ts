@@ -8,23 +8,33 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-  httpOptions: {
-    headers: {
-      "User-Agent": "aistudio-build",
-    },
-  },
-});
-
 const SUPABASE_URL = process.env.SUPABASE_URL || "https://bwdtrzcdzbzrtykjzber.supabase.co";
-const SUPABASE_KEY =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.SUPABASE_ANON_KEY ||
-  "";
 const DEVICE_ID = process.env.DEVICE_ID || "plotlab-reloj-facial-1";
 const PHOTO_CACHE_TTL_MS = 8 * 60 * 1000;
 const CONFIDENCE_THRESHOLD = 60;
+
+function getSupabaseKey() {
+  return (
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_ANON_KEY ||
+    ""
+  );
+}
+
+function getGemini() {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error("GEMINI_API_KEY no configurada en el entorno");
+  }
+  return new GoogleGenAI({
+    apiKey,
+    httpOptions: {
+      headers: {
+        "User-Agent": "aistudio-build",
+      },
+    },
+  });
+}
 
 const DATA_DIR = process.env.VERCEL
   ? path.join("/tmp", "plotlab-reloj-data")
@@ -82,12 +92,13 @@ type EmployeeCache = {
 let employeeCache: EmployeeCache | null = null;
 
 function getSupabase(): SupabaseClient {
-  if (!SUPABASE_KEY) {
+  const key = getSupabaseKey();
+  if (!key) {
     throw new Error(
-      "Falta SUPABASE_SERVICE_ROLE_KEY o SUPABASE_ANON_KEY en .env"
+      "Falta SUPABASE_SERVICE_ROLE_KEY o SUPABASE_ANON_KEY en variables de entorno (Vercel → Settings → Environment Variables)"
     );
   }
-  return createClient(SUPABASE_URL, SUPABASE_KEY, {
+  return createClient(SUPABASE_URL, key, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
@@ -217,9 +228,10 @@ export function createApiApp() {
   app.get("/api/health", (_req, res) => {
     res.json({
       status: "ok",
-      supabaseConfigured: Boolean(SUPABASE_KEY),
-      deviceId: DEVICE_ID,
+      supabaseConfigured: Boolean(getSupabaseKey()),
       geminiConfigured: Boolean(process.env.GEMINI_API_KEY),
+      deviceId: process.env.DEVICE_ID || DEVICE_ID,
+      supabaseUrl: SUPABASE_URL,
     });
   });
 
@@ -229,7 +241,8 @@ export function createApiApp() {
       res.json({
         ...settings,
         deviceId: settings.deviceId || DEVICE_ID,
-        supabaseConfigured: Boolean(SUPABASE_KEY),
+        supabaseConfigured: Boolean(getSupabaseKey()),
+        geminiConfigured: Boolean(process.env.GEMINI_API_KEY),
       });
     } catch (err: any) {
       res.status(500).json({ error: "Error al leer configuraciones", details: err.message });
@@ -238,14 +251,15 @@ export function createApiApp() {
 
   app.post("/api/settings", (req, res) => {
     try {
-      const { deviceName, deviceId } = req.body;
+      const { deviceName, deviceId } = req.body || {};
       const settings = {
-        deviceName: deviceName || "plotLAB Reloj Facial 1",
-        deviceId: deviceId || DEVICE_ID,
+        deviceName: (deviceName || "plotLAB Reloj Facial 1").toString().trim(),
+        deviceId: (deviceId || DEVICE_ID).toString().trim().toLowerCase(),
       };
       writeSettings(settings);
       res.json({ message: "Configuración guardada", settings });
     } catch (err: any) {
+      console.error("POST /api/settings", err);
       res.status(500).json({ error: "Error al guardar configuraciones", details: err.message });
     }
   });
@@ -337,16 +351,16 @@ export function createApiApp() {
         });
       }
 
-      if (!SUPABASE_KEY) {
+      if (!getSupabaseKey()) {
         return res.status(503).json({
           error:
-            "Supabase no configurado. Defina SUPABASE_SERVICE_ROLE_KEY o SUPABASE_ANON_KEY en .env",
+            "Supabase no configurado. En Vercel → Project → Settings → Environment Variables agregá SUPABASE_ANON_KEY (o SUPABASE_SERVICE_ROLE_KEY) y Redeploy.",
         });
       }
 
       if (!process.env.GEMINI_API_KEY) {
         return res.status(503).json({
-          error: "GEMINI_API_KEY no configurada en el entorno.",
+          error: "GEMINI_API_KEY no configurada en el entorno de Vercel.",
         });
       }
 
@@ -402,7 +416,7 @@ Compara la 'Foto Capturada' anterior con cada una de estas fotos de referencia. 
         text: `Realiza la comparación y devuelve la respuesta en formato JSON estructurado. employeeId debe ser el ID numérico exacto del empleado (ej. "56").`,
       });
 
-      const geminiResponse = await ai.models.generateContent({
+      const geminiResponse = await getGemini().models.generateContent({
         model: "gemini-3.5-flash",
         contents: contentsParts,
         config: {
@@ -562,12 +576,15 @@ async function startLocalServer() {
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`plotLAB Reloj Facial on port ${PORT}`);
     console.log(
-      SUPABASE_KEY
+      getSupabaseKey()
         ? `Supabase OK (${SUPABASE_URL})`
-        : "WARN: falta SUPABASE_SERVICE_ROLE_KEY o SUPABASE_ANON_KEY en .env"
+        : "WARN: falta SUPABASE_SERVICE_ROLE_KEY o SUPABASE_ANON_KEY"
     );
   });
 }
+
+const apiApp = createApiApp();
+export default apiApp;
 
 // Solo escucha en local / Node tradicional (no en Vercel serverless)
 if (!process.env.VERCEL) {
