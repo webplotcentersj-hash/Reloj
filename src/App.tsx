@@ -114,9 +114,7 @@ export default function App() {
             </span>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <Server
-              className={`w-3 h-3 ${settings.supabaseConfigured ? 'text-emerald-500' : 'text-slate-500'}`}
-            />
+            <Server className="w-3 h-3 text-emerald-500" />
             <Wifi className="w-3 h-3 text-slate-300" />
             <Signal className="w-3 h-3 text-slate-300" />
             <Battery className="w-3.5 h-3.5 text-emerald-400 fill-emerald-400" />
@@ -146,17 +144,9 @@ export default function App() {
           </div>
 
           {unlocked && (
-            <div
-              className={`flex items-center gap-1 bg-slate-950 border border-slate-800 px-2 py-1 rounded-lg text-[9px] font-bold ${
-                settings.supabaseConfigured ? 'text-emerald-400' : 'text-amber-500'
-              }`}
-            >
-              <span
-                className={`w-1.5 h-1.5 rounded-full ${
-                  settings.supabaseConfigured ? 'bg-emerald-400 animate-pulse' : 'bg-amber-500'
-                }`}
-              />
-              <span>{settings.supabaseConfigured ? 'RRHH' : 'Sin env'}</span>
+            <div className="flex items-center gap-1 bg-slate-950 border border-emerald-500/30 px-2 py-1 rounded-lg text-[9px] font-bold text-emerald-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>online</span>
             </div>
           )}
         </div>

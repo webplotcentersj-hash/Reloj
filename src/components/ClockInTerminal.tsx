@@ -51,35 +51,87 @@ export default function ClockInTerminal({ onRecordAdded, employeesCount }: Clock
     return () => clearInterval(timer);
   }, [autoModeCooldown]);
 
-  // Initialize camera
+  // Initialize camera with progressive fallbacks (móvil / desktop / HTTPS)
   const startCamera = async () => {
     setCameraError(null);
     try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setCameraError(
+          !window.isSecureContext
+            ? 'La cámara requiere HTTPS (o localhost). Abrí la URL de Vercel por https://'
+            : 'Este navegador no soporta cámara.'
+        );
+        return;
+      }
+
       if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+        stream.getTracks().forEach((track) => track.stop());
       }
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
-        audio: false
-      });
+
+      const attempts: MediaStreamConstraints[] = [
+        { video: { facingMode: { ideal: 'user' } }, audio: false },
+        { video: true, audio: false },
+        { video: { facingMode: 'environment' }, audio: false },
+      ];
+
+      let mediaStream: MediaStream | null = null;
+      let lastError: any = null;
+
+      for (const constraints of attempts) {
+        try {
+          mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+          break;
+        } catch (err) {
+          lastError = err;
+        }
+      }
+
+      if (!mediaStream) {
+        throw lastError || new Error('getUserMedia failed');
+      }
+
       setStream(mediaStream);
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-      }
     } catch (err: any) {
-      console.error("Camera access error:", err);
-      setCameraError("No se pudo acceder a la cámara. Asegúrese de otorgar los permisos necesarios.");
+      console.error('Camera access error:', err);
+      const name = err?.name || '';
+      if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+        setCameraError('Permiso de cámara denegado. Activá la cámara en el candado del navegador y reintentá.');
+      } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+        setCameraError('No se encontró ninguna cámara en este dispositivo.');
+      } else if (name === 'NotReadableError' || name === 'TrackStartError') {
+        setCameraError('La cámara está en uso por otra app. Cerrala y reintentá.');
+      } else if (!window.isSecureContext) {
+        setCameraError('La cámara solo funciona en HTTPS. Usá la URL de Vercel (https://…).');
+      } else {
+        setCameraError(`No se pudo abrir la cámara (${name || 'error'}). Revisá permisos y reintentá.`);
+      }
     }
   };
 
   useEffect(() => {
     startCamera();
     return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
+      // cleanup runs with latest stream via ref pattern below
     };
   }, []);
+
+  useEffect(() => {
+    return () => {
+      stream?.getTracks().forEach((track) => track.stop());
+    };
+  }, [stream]);
+
+  // Attach stream when video element is ready
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !stream) return;
+    video.srcObject = stream;
+    video.muted = true;
+    video.setAttribute('playsinline', 'true');
+    video.play().catch(() => {
+      /* autoplay policies — playsInline + muted usually enough */
+    });
+  }, [stream]);
 
   // Auto scan trigger using a debounced stable capture approach
   useEffect(() => {
